@@ -4,10 +4,13 @@ import Navbar from "./components/Navbar";
 import Footer from "./components/Footer";
 import LogIn from "./pages/Login";
 import SignUp from "./pages/Signup";
+import { Toaster } from "react-hot-toast";
 
 function App() {
   return (
     <>
+      <Toaster />
+      
       {/* Navbar */}
       <Navbar />
 
