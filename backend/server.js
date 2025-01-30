@@ -5,6 +5,7 @@ import cors from "cors";
 import User from "./models/user.model.js";
 import bcryptjs from "bcryptjs";
 import jwt from "jsonwebtoken";
+import cookieParser from "cookie-parser";
 
 dotenv.config(); // Load environment variables from .env
 
@@ -18,6 +19,7 @@ app.use(
     credentials: true, // Include credentials (cookies) in requests
   })
 );
+app.use(cookieParser());
 
 // Test route
 app.get("/", (req, res) => {
@@ -131,6 +133,40 @@ app.post("/api/login", async (req, res) => {
   }
 });
 
+// Fetch User
+
+app.get("/api/fetch-user", async (req, res) => {
+  const { token } = req.cookies;
+  if (!token) {
+    return res.status(401).json({ message: "No token provided." });
+  }
+
+  try {
+    const decoded = jwt.verify(token, process.env.JWT_SECRET);
+
+    if (!decoded) {
+      return res.status(401).json({ message: "Invalid token" });
+    }
+
+    const userDoc = await User.findById(decoded.id).select("-password"); // Find all fields except the password
+
+    if (!userDoc) {
+      return res.status(400).json({ message: "User not found." });
+    }
+
+    res.status(200).json({
+      user: userDoc,
+    });
+  } catch (error) {
+    console.log("Error in fetching user", error);
+    res.status(400).json({ message: error.message });
+  }
+});
+
+app.post("/api/logout", async (req, res) => {
+  res.clearCookie("token"); // Remove the authentication token
+  res.status(200).json({ message: "Logged out successfully." });
+});
 
 
 app.listen(PORT || 5000, () => {
