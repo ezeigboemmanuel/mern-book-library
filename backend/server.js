@@ -6,13 +6,21 @@ import User from "./models/user.model.js";
 import bcryptjs from "bcryptjs";
 import jwt from "jsonwebtoken";
 import cookieParser from "cookie-parser";
+import Book from "./models/book.model.js";
+import { v2 as cloudinary } from "cloudinary";
 
 dotenv.config(); // Load environment variables from .env
+
+cloudinary.config({
+  cloud_name: process.env.CLOUD_NAME,
+  api_key: process.env.API_KEY,
+  api_secret: process.env.API_SECRET,
+});
 
 const app = express();
 
 // Middlewares
-app.use(express.json());
+app.use(express.json({ limit: "20mb" }));
 app.use(
   cors({
     origin: "http://localhost:5173", // Allow requests from your frontend
@@ -168,6 +176,132 @@ app.post("/api/logout", async (req, res) => {
   res.status(200).json({ message: "Logged out successfully." });
 });
 
+app.post("/api/add-book", async (req, res) => {
+  const { image, title, subtitle, author, link, review } = req.body;
+  const { token } = req.cookies;
+
+  if (!token) {
+    return res.status(401).json({ message: "No token provided." });
+  }
+
+  try {
+    // Verify user authentication
+    const decoded = jwt.verify(token, process.env.JWT_SECRET);
+    if (!decoded) {
+      return res.status(401).json({ message: "Invalid token" });
+    }
+
+    // Find the user in the database
+    const userDoc = await User.findById(decoded.id).select("-password");
+
+    // Upload image to Cloudinary
+    const imageResponse = await cloudinary.uploader.upload(image);
+
+    // Create a new book entry
+    const book = await Book.create({
+      image: imageResponse.secure_url, // Store Cloudinary image URL
+      title,
+      subtitle,
+      author,
+      link,
+      review,
+      user: userDoc,
+    });
+
+    return res.status(200).json({ book, message: "Book added successfully." });
+  } catch (error) {
+    res.status(400).json({ message: error.message });
+  }
+});
+
+app.get("/api/fetch-books", async (req, res) => {
+  try {
+    // Retrieve all books from the database, sorted by creation date (latest first)
+    const books = await Book.find().sort({ createdAt: -1 });
+
+    // Send the books as a response
+    return res.status(200).json({ books });
+  } catch (error) {
+    // Handle any errors
+    res.status(400).json({ message: error.message });
+  }
+});
+
+app.get("/api/fetch-book/:id", async (req, res) => {
+  try {
+    // Extract the book ID from the request parameters
+    const { id } = req.params;
+
+    // Find the book in the database and populate the user field (only username)
+    const book = await Book.findById(id).populate("user", ["username"]);
+
+    // Send the book data as a response
+    return res.status(200).json({ book });
+  } catch (error) {
+    // Handle any errors
+    res.status(400).json({ message: error.message });
+  }
+});
+
+app.post("/api/update-book/:id", async (req, res) => {
+  const { image, title, subtitle, author, link, review } = req.body;
+  const { token } = req.cookies;
+  if (!token) {
+    return res.status(401).json({ message: "No token provided." });
+  }
+  const { id } = req.params;
+  try {
+    const decoded = jwt.verify(token, process.env.JWT_SECRET);
+
+    if (!decoded) {
+      return res.status(401).json({ message: "Invalid token" });
+    }
+    const book = await Book.findById(id);
+
+    if (image) {
+      // Delete the previous one first
+      const parts = book.image.split("/");
+      const fileName = parts[parts.length - 1]; // Extract the last part: "ihwklaco9wt2d0kqdqrs.png"
+      const imageId = fileName.split(".")[0];
+      cloudinary.uploader
+        .destroy(`Favlib/${imageId}`)
+        .then((result) => console.log("result: ", result));
+
+      // Then upload the new one
+      const imageResponse = await cloudinary.uploader.upload(image, {
+        folder: "/Favlib",
+      });
+
+      const updatedBook = await Book.findByIdAndUpdate(id, {
+        image: imageResponse.secure_url,
+        title,
+        subtitle,
+        author,
+        link,
+        review,
+      });
+
+      return res
+        .status(200)
+        .json({ book: updatedBook, message: "Book updated successfully." });
+    }
+
+    const updatedBook = await Book.findByIdAndUpdate(id, {
+      title,
+      subtitle,
+      author,
+      link,
+      review,
+    });
+
+    return res
+      .status(200)
+      .json({ book: updatedBook, message: "Book updated successfully." });
+  } catch (error) {
+    console.log(error.message);
+    res.status(400).json({ message: error.message });
+  }
+});
 
 app.listen(PORT || 5000, () => {
   // Connect to Database
