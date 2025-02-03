@@ -24,7 +24,7 @@ const app = express();
 app.use(express.json({ limit: "20mb" }));
 app.use(
   cors({
-    origin: "http://localhost:5173", // Allow requests from your frontend
+    origin: "https://mern-book-library-8lmi.onrender.com", // Allow requests from your frontend
     credentials: true, // Include credentials (cookies) in requests
   })
 );
