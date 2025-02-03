@@ -11,6 +11,8 @@ import RedirectAuthenticatedUser from "./providers/RedirectAuthenticatedUsers";
 import RedirectUnauthenticatedUser from "./providers/RedirectUnauthenticatedUsers";
 import AddBook from "./pages/AddBook";
 import Bookpage from "./pages/Bookpage";
+import UpdateBook from "./pages/UpdateBook";
+import Searchpage from "./pages/Searchbook";
 
 function App() {
   const { fetchUser, fetchingUser } = useAuthStore();
@@ -58,6 +60,17 @@ function App() {
           }
         />
         <Route path="/book/:id" element={<Bookpage />} />
+
+        <Route
+          path="/book/:id/update"
+          element={
+            <RedirectUnauthenticatedUser>
+              <UpdateBook />
+            </RedirectUnauthenticatedUser>
+          }
+        />
+
+        <Route path="/search" element={<Searchpage />} />
       </Routes>
 
       {/* Footer */}
