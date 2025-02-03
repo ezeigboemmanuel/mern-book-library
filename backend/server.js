@@ -8,6 +8,7 @@ import jwt from "jsonwebtoken";
 import cookieParser from "cookie-parser";
 import Book from "./models/book.model.js";
 import { v2 as cloudinary } from "cloudinary";
+import path from "path";
 
 dotenv.config(); // Load environment variables from .env
 
@@ -28,6 +29,8 @@ app.use(
   })
 );
 app.use(cookieParser());
+
+const __dirname = path.resolve();
 
 // Test route
 app.get("/", (req, res) => {
@@ -349,6 +352,14 @@ app.get("/api/search", async (req, res) => {
     res.status(400).json({ message: error.message });
   }
 });
+
+if(process.env.NODE_ENV === "production"){
+  app.use(express.static(path.join(__dirname, "/frontend/dist")));
+
+  app.get("*", (req, res) => {
+    res.sendFile(path.resolve(__dirname, "frontend", "dist", "index.html"));
+  });
+}
 
 app.listen(PORT || 5000, () => {
   // Connect to Database
