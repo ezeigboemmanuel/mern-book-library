@@ -32,10 +32,6 @@ app.use(cookieParser());
 
 const __dirname = path.resolve();
 
-// Test route
-app.get("/", (req, res) => {
-  res.send("Updated: Backend Node.js server is running!");
-});
 
 // Start the server
 const PORT = process.env.PORT; // Attempt to access the variable
